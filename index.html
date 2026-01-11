@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearBG AI - Bulbul Computer Centre</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+body { font-family: 'Inter', sans-serif; background:#0d121f; }
+canvas { touch-action:none; }
+</style>
+</head>
+
+<body class="text-white min-h-screen flex flex-col items-center p-6">
+
+<!-- HEADER -->
+<div class="w-full max-w-6xl flex justify-between items-center mt-4">
+  <div class="flex items-center gap-2">
+    <div class="bg-[#4136e0] h-10 w-10 flex items-center justify-center rounded-xl font-bold text-xl">C</div>
+    <span class="text-xl font-bold">ClearBG <span class="text-[#6366f1]">AI</span></span>
+  </div>
+</div>
+
+<!-- TITLE -->
+<div class="text-center mt-10">
+  <h1 class="text-4xl md:text-5xl font-extrabold">
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#e1544a] underline underline-offset-8 decoration-2">Bulbul</a>
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#d89e4a] underline underline-offset-8 decoration-2">Computer</a>
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#9d79bb] underline underline-offset-8 decoration-2">Centre</a>
+  </h1>
+
+  <p class="mt-3 text-[#6b79d6] text-2xl font-semibold">
+    Background Removal
+  </p>
+
+  <p class="mt-4 text-gray-400 text-lg">
+    Developed by
+    <a href="https://wa.me/917002443108" target="_blank"
+       class="text-green-400 font-semibold underline underline-offset-4">
+      Jahangir Hussain
+    </a>
+  </p>
+</div>
+
+<!-- MAIN GRID -->
+<div class="mt-12 w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10">
+
+  <!-- LEFT : UPLOAD -->
+  <div class="flex flex-col items-center">
+    <label class="w-full flex flex-col items-center justify-center
+      border-2 border-dashed border-indigo-500 rounded-3xl p-12
+      cursor-pointer bg-[#111827] hover:bg-[#161e31] transition">
+      
+      <i data-lucide="upload" class="w-12 h-12 text-indigo-400 mb-4"></i>
+      <p class="text-xl font-semibold">Upload Image</p>
+      <p class="text-sm text-gray-400 mt-2">Up to 7 images allowed</p>
+      <input type="file" accept="image/*" class="hidden" onchange="handleFile(this)">
+    </label>
+  </div>
+
+  <!-- RIGHT : EDITOR -->
+  <div id="editor" class="hidden flex flex-col items-center">
+    <canvas id="canvas" class="rounded-2xl w-full"></canvas>
+
+    <div class="flex flex-wrap gap-3 mt-6 justify-center">
+      <button onclick="setBg('transparent')" class="px-4 py-2 bg-gray-700 rounded">Transparent</button>
+      <button onclick="setBg('#2563eb')" class="px-4 py-2 bg-blue-600 rounded">Blue</button>
+      <button onclick="setBg('#38bdf8')" class="px-4 py-2 bg-sky-400 rounded">Sky Blue</button>
+      <button onclick="setBg('#ffffff')" class="px-4 py-2 bg-white text-black rounded">White</button>
+      <button onclick="setBg('#ef4444')" class="px-4 py-2 bg-red-500 rounded">Red</button>
+      <button onclick="setBg('#22c55e')" class="px-4 py-2 bg-green-500 rounded">Green</button>
+    </div>
+
+    <div class="flex gap-4 mt-6">
+      <button onclick="mode='erase'" class="px-4 py-2 bg-red-600 rounded">Erase</button>
+      <button onclick="mode='restore'" class="px-4 py-2 bg-green-600 rounded">Restore</button>
+    </div>
+
+    <input type="range" min="5" max="60" value="25" class="mt-4 w-full"
+           oninput="brushSize=this.value">
+
+    <button onclick="download()" class="mt-6 w-full bg-indigo-600 py-4 rounded-xl font-bold">
+      Download PNG
+    </button>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="mt-20 w-full border-t border-gray-800 pt-6 text-center text-gray-400">
+  <p class="font-semibold text-gray-300">
+    Bulbul Computer Centre
+  </p>
+
+  <p class="mt-2 text-sm">
+    📞
+    <a href="https://wa.me/919859298707" target="_blank"
+       class="text-green-400 hover:underline">
+      WhatsApp: 9859298707
+    </a>
+  </p>
+
+  <p class="mt-1 text-sm">
+    🌐
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-indigo-400 hover:underline">
+      csc-jakir.lovable.app
+    </a>
+  </p>
+
+  <p class="mt-4 text-xs text-gray-500">
+    © 2026 Bulbul Computer Centre. All rights reserved.
+  </p>
+</footer>
+
+<!-- LOADER -->
+<div id="loader" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden
+  flex flex-col items-center justify-center text-center">
+  <div class="animate-spin rounded-full h-16 w-16 border-4
+    border-blue-500 border-t-transparent mb-6"></div>
+  <h2 class="text-2xl font-bold">Bulbul Computer Centre</h2>
+  <p class="text-gray-300 text-sm mt-2">Processing image…</p>
+</div>
+
+<script>
+lucide.createIcons();
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const editor = document.getElementById("editor");
+const loader = document.getElementById("loader");
+
+let originalImage=null;
+let maskCanvas=document.createElement("canvas");
+let maskCtx=maskCanvas.getContext("2d");
+
+let bgColor="#2563eb";
+let drawing=false;
+let mode="erase";
+let brushSize=25;
+
+let imageCount=0;
+const MAX_IMAGES=7;
+
+function showLoader(){loader.classList.remove("hidden")}
+function hideLoader(){loader.classList.add("hidden")}
+
+const segmenter=new SelfieSegmentation({
+  locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`
+});
+segmenter.setOptions({modelSelection:1});
+
+segmenter.onResults(res=>{
+  originalImage=res.image;
+  canvas.width=res.image.width;
+  canvas.height=res.image.height;
+  maskCanvas.width=canvas.width;
+  maskCanvas.height=canvas.height;
+
+  maskCtx.clearRect(0,0,canvas.width,canvas.height);
+  maskCtx.drawImage(res.segmentationMask,0,0);
+  maskCtx.filter="blur(1.5px)";
+  maskCtx.drawImage(maskCanvas,0,0);
+  maskCtx.filter="none";
+
+  render();
+  hideLoader();
+  editor.classList.remove("hidden");
+});
+
+function handleFile(input){
+  if(imageCount>=MAX_IMAGES){alert("Maximum 7 images allowed");return;}
+  if(!input.files[0])return;
+  imageCount++;
+  const img=new Image();
+  img.src=URL.createObjectURL(input.files[0]);
+  img.onload=async()=>{showLoader();await segmenter.send({image:img});}
+}
+
+function render(){
+  if(!originalImage)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(bgColor!=="transparent"){
+    ctx.fillStyle=bgColor;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+  const t=document.createElement("canvas");
+  t.width=canvas.width;t.height=canvas.height;
+  const tctx=t.getContext("2d");
+  tctx.drawImage(originalImage,0,0);
+  tctx.globalCompositeOperation="destination-in";
+  tctx.drawImage(maskCanvas,0,0);
+  ctx.drawImage(t,0,0);
+}
+
+function setBg(c){bgColor=c;render()}
+
+canvas.onpointerdown=e=>{drawing=true;draw(e)}
+canvas.onpointermove=e=>drawing&&draw(e)
+canvas.onpointerup=()=>drawing=false
+
+function draw(e){
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(canvas.width/r.width);
+  const y=(e.clientY-r.top)*(canvas.height/r.height);
+  maskCtx.globalCompositeOperation=mode==="erase"?"destination-out":"source-over";
+  maskCtx.fillStyle="rgba(255,255,255,0.85)";
+  maskCtx.beginPath();
+  maskCtx.arc(x,y,brushSize,0,Math.PI*2);
+  maskCtx.fill();
+  render();
+}
+
+function download(){
+  const a=document.createElement("a");
+  a.download="clearbg-ai.png";
+  a.href=canvas.toDataURL("image/png");
+  a.click();
+}
+</script>
+
+</body>
+</html>
