@@ -7,14 +7,7 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-
-<!-- MODNet -->
-<script type="module">
-import { AutoModel, AutoProcessor, RawImage }
-from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1";
-
-window.MODNET = { AutoModel, AutoProcessor, RawImage };
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -28,14 +21,16 @@ body {
   background-attachment: fixed;
   background-color: #0d121f;
 }
+
 body::before {
-  content:"";
-  position:fixed;
-  inset:0;
-  background:rgba(13,18,31,0.85);
-  z-index:-1;
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 18, 31, 0.85);
+  z-index: -1;
 }
-canvas{touch-action:none}
+
+canvas { touch-action: none; }
 </style>
 </head>
 
@@ -52,9 +47,12 @@ canvas{touch-action:none}
 <!-- TITLE -->
 <div class="text-center mt-10">
   <h1 class="text-4xl md:text-5xl font-extrabold">
-    <a href="https://csc-jakir.lovable.app" target="_blank" class="text-[#e1544a] underline">Bulbul</a>
-    <a href="https://csc-jakir.lovable.app" target="_blank" class="text-[#d89e4a] underline">Computer</a>
-    <a href="https://csc-jakir.lovable.app" target="_blank" class="text-[#9d79bb] underline">Centre</a>
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#e1544a] underline underline-offset-8 decoration-2">Bulbul</a>
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#d89e4a] underline underline-offset-8 decoration-2">Computer</a>
+    <a href="https://csc-jakir.lovable.app" target="_blank"
+       class="text-[#9d79bb] underline underline-offset-8 decoration-2">Centre</a>
   </h1>
 
   <p class="mt-3 text-[#6b79d6] text-2xl font-semibold">Background Removal</p>
@@ -62,7 +60,7 @@ canvas{touch-action:none}
   <p class="mt-4 text-gray-400 text-lg">
     Developed by
     <a href="https://wa.me/917002443108" target="_blank"
-       class="text-green-400 font-semibold underline">
+       class="text-green-400 font-semibold underline underline-offset-4">
       Jahangir Hussain
     </a>
   </p>
@@ -115,17 +113,23 @@ canvas{touch-action:none}
 <!-- FOOTER -->
 <footer class="mt-20 w-full border-t border-gray-800 pt-6 text-center text-gray-400">
   <p class="font-semibold text-gray-300">Bulbul Computer Centre</p>
+
   <p class="mt-2 text-sm">
-    📞 <a href="https://wa.me/919859298707" class="text-green-400">WhatsApp: 9859298707</a>
+    📞 <a href="https://wa.me/919859298707" class="text-green-400 hover:underline">
+      WhatsApp: 9859298707
+    </a>
   </p>
+
   <p class="mt-1 text-sm">
-    🌐 <a href="https://csc-jakir.lovable.app" class="text-indigo-400">csc-jakir.lovable.app</a>
+    🌐 <a href="https://csc-jakir.lovable.app" class="text-indigo-400 hover:underline">
+      csc-jakir.lovable.app
+    </a>
   </p>
 </footer>
 
 <!-- LOADER -->
 <div id="loader" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden
-  flex flex-col items-center justify-center text-center">
+flex flex-col items-center justify-center text-center">
   <div class="animate-spin rounded-full h-16 w-16 border-4
     border-blue-500 border-t-transparent mb-6"></div>
   <h2 class="text-2xl font-bold">Bulbul Computer Centre</h2>
@@ -135,99 +139,119 @@ canvas{touch-action:none}
 <script>
 lucide.createIcons();
 
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-const editor=document.getElementById("editor");
-const loader=document.getElementById("loader");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const editor = document.getElementById("editor");
+const loader = document.getElementById("loader");
 
-let originalImage=null;
-let maskCanvas=document.createElement("canvas");
-let maskCtx=maskCanvas.getContext("2d");
+let originalImage = null;
+let maskCanvas = document.createElement("canvas");
+let maskCtx = maskCanvas.getContext("2d");
 
-let bgColor="#2563eb";
-let drawing=false;
-let mode="erase";
-let brushSize=25;
+let bgColor = "#2563eb";
+let drawing = false;
+let mode = "erase";
+let brushSize = 25;
 
-let model,processor;
-const MAX_IMAGES=7;
-let count=0;
+let imageCount = 0;
+const MAX_IMAGES = 7;
+let isProcessing = false;
 
-function showLoader(){loader.classList.remove("hidden")}
-function hideLoader(){loader.classList.add("hidden")}
+function showLoader(){ loader.classList.remove("hidden"); }
+function hideLoader(){ loader.classList.add("hidden"); }
 
-(async()=>{
-  showLoader();
-  model=await MODNET.AutoModel.from_pretrained("Xenova/modnet",{device:"webgpu"});
-  processor=await MODNET.AutoProcessor.from_pretrained("Xenova/modnet");
-  hideLoader();
-})();
+const segmenter = new SelfieSegmentation({
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`
+});
+segmenter.setOptions({ modelSelection: 1 });
 
-async function handleFile(input){
-  if(!input.files[0]||count>=MAX_IMAGES)return;
-  count++;
-  showLoader();
+segmenter.onResults(res => {
+  if (!res.image) return;
 
-  const raw=await MODNET.RawImage.fromBlob(input.files[0]);
-  const {pixel_values}=await processor(raw);
-  const {output}=await model({input:pixel_values});
+  originalImage = res.image;
+  canvas.width = res.image.width;
+  canvas.height = res.image.height;
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
 
-  const mask=await MODNET.RawImage
-    .fromTensor(output[0].mul(255).to("uint8"))
-    .resize(raw.width,raw.height);
-
-  canvas.width=raw.width;
-  canvas.height=raw.height;
-  maskCanvas.width=raw.width;
-  maskCanvas.height=raw.height;
-
-  originalImage=raw;
-  maskCtx.clearRect(0,0,raw.width,raw.height);
-  maskCtx.drawImage(await mask.toCanvas(),0,0);
+  maskCtx.clearRect(0,0,canvas.width,canvas.height);
+  maskCtx.drawImage(res.segmentationMask,0,0);
+  maskCtx.filter = "blur(1.5px)";
+  maskCtx.drawImage(maskCanvas,0,0);
+  maskCtx.filter = "none";
 
   render();
   hideLoader();
+  isProcessing = false;
   editor.classList.remove("hidden");
+});
+
+function handleFile(input){
+  if (!input.files[0]) return;
+  if (imageCount >= MAX_IMAGES) {
+    alert("Maximum 7 images allowed");
+    return;
+  }
+  if (isProcessing) return;
+
+  imageCount++;
+  isProcessing = true;
+  showLoader();
+
+  const img = new Image();
+  img.src = URL.createObjectURL(input.files[0]);
+  img.onload = async () => {
+    await segmenter.send({ image: img });
+  };
 }
 
 function render(){
-  if(!originalImage)return;
+  if (!originalImage) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(bgColor!=="transparent"){
-    ctx.fillStyle=bgColor;
+
+  if (bgColor !== "transparent") {
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
-  const t=document.createElement("canvas");
-  t.width=canvas.width;t.height=canvas.height;
-  const tctx=t.getContext("2d");
-  tctx.drawImage(originalImage.toCanvas(),0,0);
-  tctx.globalCompositeOperation="destination-in";
+
+  const t = document.createElement("canvas");
+  t.width = canvas.width;
+  t.height = canvas.height;
+  const tctx = t.getContext("2d");
+
+  tctx.drawImage(originalImage,0,0);
+  tctx.globalCompositeOperation = "destination-in";
   tctx.drawImage(maskCanvas,0,0);
+
   ctx.drawImage(t,0,0);
 }
 
-function setBg(c){bgColor=c;render()}
+function setBg(c){ bgColor = c; render(); }
 
-canvas.onpointerdown=e=>{drawing=true;draw(e)}
-canvas.onpointermove=e=>drawing&&draw(e)
-canvas.onpointerup=()=>drawing=false
+canvas.onpointerdown = e => { drawing = true; draw(e); };
+canvas.onpointermove = e => drawing && draw(e);
+canvas.onpointerup = () => drawing = false;
 
 function draw(e){
-  const r=canvas.getBoundingClientRect();
-  const x=(e.clientX-r.left)*(canvas.width/r.width);
-  const y=(e.clientY-r.top)*(canvas.height/r.height);
-  maskCtx.globalCompositeOperation=mode==="erase"?"destination-out":"source-over";
-  maskCtx.fillStyle="rgba(255,255,255,0.9)";
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (canvas.width / r.width);
+  const y = (e.clientY - r.top) * (canvas.height / r.height);
+
+  maskCtx.globalCompositeOperation =
+    mode === "erase" ? "destination-out" : "source-over";
+
+  maskCtx.fillStyle = "rgba(255,255,255,0.85)";
   maskCtx.beginPath();
   maskCtx.arc(x,y,brushSize,0,Math.PI*2);
   maskCtx.fill();
+
   render();
 }
 
 function download(){
-  const a=document.createElement("a");
-  a.download="clearbg-ai.png";
-  a.href=canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.download = "clearbg-ai.png";
+  a.href = canvas.toDataURL("image/png");
   a.click();
 }
 </script>
