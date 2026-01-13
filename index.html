@@ -7,7 +7,10 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js"
+  crossorigin="anonymous">
+</script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -161,7 +164,8 @@ function showLoader(){ loader.classList.remove("hidden"); }
 function hideLoader(){ loader.classList.add("hidden"); }
 
 const segmenter = new SelfieSegmentation({
-  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`
+  locateFile: (file) =>
+  `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/${file}`
 });
 segmenter.setOptions({ modelSelection: 1 });
 
